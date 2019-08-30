@@ -55,5 +55,128 @@ Docker 容器（Container）类似于一个轻量级的沙箱，Docker 利用容
 Docker 仓库（Repository）类似于代码仓库，是Docker 集中存放镜像文件的场所。<br>
 当用户创建了自己的镜像之后就可以使用push 命令将它上传到制定的公有或私有仓库。这样用户下次在另外一台机器上使用该镜像时，只需将其从仓库上pull 下来就可以了。
 
-# Docker 镜像
 
+# Docker 镜像
+Dokcer 运行容器前需要本地存在对应的镜像，如果镜像不存在本地，Docker 会尝试先从默认镜像仓库下载（默认使用Docker Hub公共注册服务器中的仓库），用户也可以通过配置，使用自定义的镜像仓库。
+
+
+## 搜寻镜像
+docker search 命令可以搜索远端仓库中共享的镜像，默认搜索Docker Hub 官方仓库中的镜像。用法为docker search TERM，支持的参数包括：
+<ul>
+    <li>--automated=false 是否显示自动创建的镜像。
+    <li>--no-trunc=false 输出信息不截断显示。
+    <li>-s, --stars=0 指定仅显示评价为指定星级以上的镜像。
+</ul>
+默认的输出结果将按照星级评价进行排序。官方的镜像说明是官方项目组创建和维护的，automated 资源则允许用户验证镜像的来源和内容。
+
+## 获取镜像
+docker pull NAME[:TAG]命令从网络上下载镜像。
+例，从Docker Hub 的Ubuntu 仓库下载一个最新的Ubuntu 操作系统的镜像。
+```bash
+sudo docker pull ubuntu
+```
+<br>
+通过指定标签来下载特定版本的某一个镜像，例如14.04 标签的镜像：
+```bash
+sudo docker pull ubuntu:14.04
+```
+<br>
+通过指定完整仓库注册服务器地址从特定仓库实现下载：
+```bash
+sudo docker pull dl.dockerpool.com:5000/ubuntu
+```
+<br>
+
+## 查看镜像信息
+docker images 命令可以列出本地host 上已有的镜像。
+```bash
+sudo docker images
+```
+在列出的信息中，可以看到几个字段信息：
+<ul>
+    <li>REPOSITORY: 来自于哪个仓库，比如ubuntu 仓库。
+    <li>TAG：镜像的标签信息，比如14.04。
+    <li>IMAGE ID：镜像的ID 号（唯一）。
+    <li>CREATED：创建时间。
+    <li>VIRTUAL SIZE：镜像大小。
+</ul>
+其中镜像的ID 信息十分重要，它唯一标识了镜像。
+<br>
+docker inspect IMAGE ID 命令可以获取该镜像的详细信息：
+```bash
+sudo docker inspect a2a15febcdf3
+```
+docker inspect 命令返回的是一个JSON 格式的消息，如果只需要获取其中的一项内容，可以使用-f 参数来指定。例如，获取镜像的 "Config" 信息：
+```bash
+sudo docker inspect -f {{".Config}} a2a15febcdf3
+```
+
+## tag 的增加与移除
+docker tag IMAGE ID REPOSITORY:TAG 命令为镜像增加新的仓库与标签：
+```bash
+sudo docker tag a2a15febcdf3 centos:14.04
+```
+docker rmi -f REPOSITORY:TAG 命令删除某个镜像的tag
+```bash
+sudo docker rmi [-f] centos:14.04
+```
+
+## 删除镜像
+docker rmi IMAGE ID 命令可以删除镜像。
+```bash
+sudo docker rmi a2a15febcdf3
+```
+<br>
+删除镜像前需确保：只有一个标签而没有额外的标签指向它且没有该镜像创建的容器。
+
+## 创建镜像
+docker commit [OPTIONS] CONTAINER ID [REPOSITORY[:TAG]] 命令用于从本地创建一个新镜像，类似git commit 命令提交一个新版本。
+OPTIONS 选项主要包括：
+<ul>
+    <li>-a, --author="作者信息"
+    <li>-m, --message="提交消息"
+    <li>-p, --pause=true 提交时是否暂停容器运行。
+</ul>
+例，运行ubuntu 镜像，在其中进行修改操作，之后退出，使用commit 命令提交一个新的镜像。
+```bash
+docker run -t -i a2a15febcdf3 /bin/bash
+touch testDockerCommit
+exit
+```
+返回CONTAINER ID fe7c37f14f8d
+
+```bash
+sudo docker commit -a "Qi Cong" -m "Added a new file." fe7c37f14f8d ubuntu:test
+```
+
+## 导出/导入镜像
+docker save -o PATH (IMAGE ID | REPOSITORY:TAG) 命令将指定镜像导出到本地文件
+```bash
+sudo docker save -o dockerfiles/ubuntu_latest.tar ubuntu:latest
+```
+当使用IMAGE ID 导出时，不会保存REPOSITORY:TAG 该元数据。
+
+docker load --input PATH 或 docker load < PATH 导入本地镜像文件：
+```bash
+sudo docker load < dockerfiles/ubuntu_latest.tar
+```
+
+## 上传镜像
+docker push REPOSITORY:TAG 命令用于将镜像推送到远端服务器，第一次使用时，会提示输入登录信息或进行注册。
+```bash
+sudo docker push ubuntu/latest
+```
+
+## 从镜像启动容器
+<br>
+使用以下命令从镜像中创建ubuntu 容器，并在其中运行bash 应用：
+```bash
+sudo docker run -t -i ubuntu /bin/bash
+```
+<br>
+docker ps -a 命令查看运行的容器：
+```bash
+sudo docker ps -a
+```
+<br>
+docker rm CONTAINER ID 命令删除指定容器。
